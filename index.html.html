@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>體態追蹤</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+:root {
+  --bg: #1a1208;
+  --surface: #241c0e;
+  --surface2: #2e2410;
+  --border: #4a3820;
+  --text: #f0e8d8;
+  --muted: #9a8870;
+  --accent: #d4956a;
+  --accent-light: #3a2010;
+  --green: #8ec89a;
+  --green-light: #1a2e1a;
+  --amber: #e8c87a;
+  --amber-light: #3a2e10;
+  --pink: #e89ab8;
+  --pink-light: #3a1f2a;
+  --otter: #d4956a;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Nunito', sans-serif; min-height: 100vh; }
+h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 14px; }
+
+.app { max-width: 480px; margin: 0 auto; padding: 28px 16px 90px; }
+
+header { margin-bottom: 28px; text-align: center; }
+.header-otter { font-size: 52px; line-height: 1; margin-bottom: 8px; }
+header h1 { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: .02em; }
+header h1 span { color: var(--otter); }
+header p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.nav { display: flex; gap: 6px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 5px; }
+.nav button { flex: 1; padding: 11px 4px; border: none; background: none; font-size: 13px; font-family: 'Nunito', sans-serif; font-weight: 700; cursor: pointer; border-radius: var(--radius); color: var(--muted); transition: all .2s; }
+.nav button.active { background: var(--accent); color: #1a1208; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+.card-title { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.card-title h2 { margin-bottom: 0; }
+.card-icon { font-size: 16px; }
+
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.metric { background: var(--surface2); border-radius: var(--radius); padding: 14px; text-align: center; border: 1px solid var(--border); }
+.metric-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.metric-val { font-size: 26px; font-weight: 700; color: var(--text); }
+.metric-unit { font-size: 11px; color: var(--muted); }
+
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .08em; }
+.field input, .field select { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; font-family: 'Nunito', sans-serif; background: var(--surface2); color: var(--text); outline: none; transition: border .15s; }
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.slider-field { margin-bottom: 20px; }
+.slider-field label { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+.slider-field label span { font-size: 18px; color: var(--accent); font-family: 'Nunito', sans-serif; font-weight: 700; }
+input[type=range] { width: 100%; -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; background: var(--border); outline: none; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 3px solid var(--surface); box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.slider-labels { display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 8px; }
+
+.btn { width: 100%; padding: 16px; border: none; background: var(--accent); color: #1a1208; border-radius: var(--radius-sm); font-size: 16px; font-family: 'Nunito', sans-serif; font-weight: 700; cursor: pointer; letter-spacing: .04em; transition: opacity .15s; margin-top: 4px; }
+.btn:hover { opacity: .85; }
+.btn:active { opacity: .7; transform: scale(.98); }
+
+.log-item { border-bottom: 1px solid var(--border); padding: 12px 0; }
+.log-item:last-child { border-bottom: none; }
+.log-date { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+.log-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { font-size: 12px; font-weight: 600; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; color: var(--text); }
+
+.alert { border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; font-weight: 600; margin-bottom: 10px; line-height: 1.6; }
+.alert-green { background: var(--green-light); color: var(--green); border: 1px solid #2a5040; }
+.alert-amber { background: var(--amber-light); color: var(--amber); border: 1px solid #5a4a20; }
+.alert-pink { background: var(--pink-light); color: var(--pink); border: 1px solid #5a2a40; }
+.alert-accent { background: var(--accent-light); color: var(--accent); border: 1px solid #2a4a5a; }
+
+.week-indicator { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.week-num { font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1; }
+
+.day-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+.day-tab { flex: 1; padding: 13px 4px; border: 1px solid var(--border); background: var(--surface2); border-radius: var(--radius-sm); font-size: 14px; font-family: 'Nunito', sans-serif; font-weight: 700; cursor: pointer; color: var(--muted); text-align: center; transition: all .2s; }
+.day-tab.active { background: var(--accent); color: #1a1208; border-color: var(--accent); }
+
+.ex-block { margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface2); }
+.ex-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.ex-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.ex-note { font-size: 11px; color: var(--muted); font-weight: 600; background: var(--surface2); padding: 2px 8px; border-radius: 20px; border: 1px solid var(--border); }
+.ex-body { padding: 12px 14px; }
+.ex-weight-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ex-weight-row label { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 44px; text-transform: uppercase; letter-spacing: .06em; }
+.ex-weight-input { width: 80px; padding: 10px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; font-family: 'Nunito', sans-serif; font-weight: 700; background: var(--surface); color: var(--text); text-align: center; }
+.ex-weight-unit { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+.feel-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.feel-btn { padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); border-radius: 20px; font-size: 12px; font-family: 'Nunito', sans-serif; font-weight: 700; cursor: pointer; color: var(--muted); transition: all .15s; white-space: nowrap; }
+.feel-btn.selected { background: var(--accent); color: #1a1208; border-color: var(--accent); }
+.feel-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.empty { font-size: 13px; font-weight: 600; color: var(--muted); text-align: center; padding: 20px 0; display: block; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.trend-up { color: var(--green); font-weight: 700; }
+.trend-down { color: var(--pink); font-weight: 700; }
+.progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+
+.reminder { display: flex; align-items: flex-start; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 14px; margin-bottom: 8px; }
+.reminder-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.reminder-dot.urgent { background: var(--pink); box-shadow: 0 0 6px var(--pink); }
+.reminder-dot.soon { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.reminder-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.reminder-text { flex: 1; line-height: 1.5; color: var(--text); font-size: 13px; font-weight: 700; }
+.reminder-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 600; }
+
+
+/* Export/Import */
+.export-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+.btn-secondary { flex: 1; padding: 13px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); border-radius: var(--radius-sm); font-size: 14px; font-family: 'Nunito', sans-serif; font-weight: 700; cursor: pointer; transition: all .15s; }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--green); color: #1a1208; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 700; font-family: 'Nunito', sans-serif; z-index: 9999; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; }
+
+/* Walking otter */
+.otter-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  pointer-events: none;
+  z-index: 999;
+  overflow: hidden;
+}
+.otter {
+  position: absolute;
+  bottom: 8px;
+  font-size: 28px;
+  animation: otterWalk 18s linear infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+@keyframes otterWalk {
+  0%   { left: -60px; transform: scaleX(1); }
+  48%  { left: calc(100% + 60px); transform: scaleX(1); }
+  49%  { left: calc(100% + 60px); transform: scaleX(-1); }
+  50%  { left: calc(100% + 60px); transform: scaleX(-1); }
+  98%  { left: -60px; transform: scaleX(-1); }
+  99%  { left: -60px; transform: scaleX(1); }
+  100% { left: -60px; transform: scaleX(1); }
+}
+.otter-feet {
+  display: inline-block;
+  animation: otterBob 0.4s ease-in-out infinite alternate;
+}
+@keyframes otterBob {
+  0%   { transform: translateY(0px) rotate(-3deg); }
+  100% { transform: translateY(-4px) rotate(3deg); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-otter">🦦</div>
+    <h1>趙趙子の<span>祕密花園</span></h1>
+    <p id="today-date"></p>
+  </header>
+  <nav class="nav">
+    <button class="active" onclick="goTo('overview',this)">🦦 總覽</button>
+    <button onclick="goTo('body',this)">📏 身體</button>
+    <button onclick="goTo('training',this)">💪 訓練</button>
+    <button onclick="goTo('cycle',this)">🌙 週期</button>
+  </nav>
+
+  <!-- 總覽 -->
+  <div id="page-overview" class="page active">
+    <div id="ov-reminders"></div>
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-label">體重</div><div class="metric-val" id="ov-weight">—</div><div class="metric-unit">kg</div></div>
+      <div class="metric"><div class="metric-label">腰臀比</div><div class="metric-val" id="ov-whr">—</div></div>
+      <div class="metric"><div class="metric-label">腰圍</div><div class="metric-val" id="ov-waist">—</div><div class="metric-unit">cm</div></div>
+      <div class="metric"><div class="metric-label">大腿圍</div><div class="metric-val" id="ov-thigh">—</div><div class="metric-unit">cm</div></div>
+    </div>
+    <div class="card">
+      <h2>訓練週期</h2>
+      <div class="week-indicator">
+        <div class="week-num" id="ov-weeks">—</div>
+        <div>連續訓練週<br><span style="font-size:11px;color:var(--muted)">建議每 8–10 週安排 Deload</span></div>
+      </div>
+      <div id="ov-deload"></div>
+    </div>
+    <div class="card">
+      <h2>經期週期</h2>
+      <div id="ov-period"><span class="empty" style="padding:8px 0">請在週期頁面設定</span></div>
+    </div>
+    <div class="card">
+      <h2>最近進步</h2>
+      <div id="ov-progress"><span class="empty" style="padding:8px 0">尚無足夠訓練紀錄</span></div>
+    </div>
+  </div>
+
+  <!-- 身體數據 -->
+  <div id="page-body" class="page">
+    <div class="card">
+      <h2>新增紀錄</h2>
+      <div class="field"><label>日期</label><input type="date" id="b-date"></div>
+      <div class="field-row">
+        <div class="field"><label>體重 (kg)</label><input type="number" id="b-weight" step="0.1" placeholder="65.2"></div>
+        <div class="field"><label>腰圍 (cm)</label><input type="number" id="b-waist" step="0.5" placeholder="—"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>臀圍 (cm)</label><input type="number" id="b-hip" step="0.5" placeholder="—"></div>
+        <div class="field"><label>大腿圍 (cm)</label><input type="number" id="b-thigh" step="0.5" placeholder="—"></div>
+      </div>
+      <div class="field"><label>上臂圍 (cm)（選填）</label><input type="number" id="b-arm" step="0.5" placeholder="—"></div>
+      <div class="slider-field">
+        <label>睡眠品質 <span id="sleep-val">3</span></label>
+        <input type="range" id="b-sleep" min="1" max="5" step="1" value="3" oninput="document.getElementById('sleep-val').textContent=this.value">
+        <div class="slider-labels"><span>너무schlecht</span><span>meh</span><span>普通</span><span>不錯呦</span><span>非常쌍</span></div>
+      </div>
+      <div class="slider-field">
+        <label>疲勞度 <span id="fatigue-val">2</span></label>
+        <input type="range" id="b-fatigue" min="1" max="5" step="1" value="2" oninput="document.getElementById('fatigue-val').textContent=this.value">
+        <div class="slider-labels"><span>累累累</span><span>累累</span><span>累</span><span>普</span><span>讚</span></div>
+      </div>
+      <button class="btn" onclick="saveBody()">儲存</button>
+    </div>
+    <div class="card">
+      <h2>歷史紀錄</h2>
+      <div id="body-log"><span class="empty">尚無紀錄</span></div>
+    </div>
+  </div>
+
+  <!-- 訓練 -->
+  <div id="page-training" class="page">
+    <div class="card">
+      <h2>新增訓練</h2>
+      <div class="field"><label>日期</label><input type="date" id="t-date"></div>
+      <div class="day-tabs">
+        <button class="day-tab active" onclick="selectDay('shoulder',this)">肩</button>
+        <button class="day-tab" onclick="selectDay('back',this)">背</button>
+        <button class="day-tab" onclick="selectDay('leg',this)">腿</button>
+        <button class="day-tab" onclick="selectDay('cardio',this)">有氧</button>
+      </div>
+      <div id="ex-shoulder"><div id="ex-shoulder-exercises"></div></div>
+      <div id="ex-back" style="display:none"><div id="ex-back-exercises"></div></div>
+      <div id="ex-leg" style="display:none"><div id="ex-leg-exercises"></div></div>
+      <div id="ex-cardio" style="display:none">
+        <div class="field"><label>有氧類型</label>
+          <select id="cardio-type">
+            <option value="treadmill">跑步機爬坡</option>
+            <option value="walk">快走</option>
+            <option value="bike">騎車</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>時間（分鐘）</label><input type="number" id="cardio-duration" placeholder="45"></div>
+          <div class="field"><label>坡度</label><input type="number" id="cardio-incline" step="0.5" placeholder="4"></div>
+        </div>
+        <div class="field"><label>速度</label><input type="number" id="cardio-speed" step="0.5" placeholder="4"></div>
+      </div>
+      <button class="btn" onclick="saveTraining()" style="margin-top:8px">儲存訓練</button>
+    </div>
+    <div class="card">
+      <h2>訓練紀錄</h2>
+      <div id="training-log"><span class="empty">尚無紀錄</span></div>
+    </div>
+  </div>
+
+  <!-- 週期 -->
+  <div id="page-cycle" class="page">
+    <div class="card">
+      <h2>經期設定</h2>
+      <div class="field-row">
+        <div class="field"><label>上次開始日期</label><input type="date" id="p-last"></div>
+        <div class="field"><label>週期長度（天）</label><input type="number" id="p-cycle" value="28" min="21" max="40"></div>
+      </div>
+      <button class="btn" onclick="savePeriod()">儲存</button>
+    </div>
+    <div class="card" id="cycle-card" style="display:none">
+      <h2>目前狀態</h2>
+      <div id="cycle-detail"></div>
+    </div>
+    <div class="card">
+      <h2>訓練開始日（計算連續週數）</h2>
+      <div class="field"><label>開始日期</label><input type="date" id="ts-start"></div>
+      <button class="btn" onclick="saveTrainStart()">設定</button>
+    </div>
+    <div class="card">
+      <h2>📦 資料匯出 / 匯入</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">匯出資料可以丟給 Claude 分析，也可以備份或換裝置時使用。</p>
+      <div class="export-bar">
+        <button class="btn-secondary" onclick="exportData()">⬇ 匯出資料</button>
+        <button class="btn-secondary" onclick="document.getElementById('import-file').click()">⬆ 匯入資料</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+  </div>
+</div>
+
+<script>
+const db = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)) }catch{ return null } },
+  set(k,v){ localStorage.setItem(k,JSON.stringify(v)) }
+};
+
+const todayStr = new Date().toISOString().slice(0,10);
+document.getElementById('today-date').textContent = todayStr;
+document.getElementById('b-date').value = todayStr;
+document.getElementById('t-date').value = todayStr;
+
+const menus = {
+  shoulder: [
+    {id:'press', name:'啞鈴肩推', note:''},
+    {id:'fly', name:'啞鈴飛鳥', note:'遞減組'},
+    {id:'revfly', name:'反向飛鳥', note:'輪替', variants:['蝴蝶機','Cable']},
+    {id:'tricep', name:'纜繩三頭下壓', note:''},
+    {id:'chestpress', name:'胸推', note:'兩週一次'},
+    {id:'upperabs', name:'上腹核心', note:'捲腹'},
+    {id:'lowerabs', name:'下腹核心', note:'抬腿'},
+  ],
+  back: [
+    {id:'pullup', name:'引體向上', note:'器械輔助'},
+    {id:'dbrow', name:'啞鈴划船', note:''},
+    {id:'pulldown', name:'滑輪下拉', note:''},
+    {id:'widerow', name:'寬握坐姿划船', note:''},
+    {id:'narrowpulldown', name:'窄握下拉', note:''},
+    {id:'narrowrow', name:'窄握坐姿划船', note:''},
+  ],
+  leg: [
+    {id:'hipthrust', name:'臀推', note:'兩週一次'},
+    {id:'rdl', name:'槓鈴 RDL', note:''},
+    {id:'squat', name:'槓鈴深蹲', note:''},
+    {id:'split', name:'分腿蹲 / 單腳 RDL', note:'輪替', variants:['分腿蹲','單腳 RDL']},
+    {id:'abduct', name:'髖外展', note:''},
+  ],
+};
+
+const feels = ['太輕','還可以','姜姜好','有點重','太重了不要不自量力'];
+let currentDay = 'shoulder';
+const exData = {};
+
+function setVariant(exId, variant, btn){
+  exData[exId].variant = variant;
+  const nameEl = document.getElementById("exname-"+exId);
+  if(nameEl){
+    const menu = Object.values(menus).flat().find(e=>e.id===exId);
+    nameEl.textContent = menu ? menu.name+' '+variant : variant;
+  }
+  btn.parentElement.querySelectorAll(".feel-btn").forEach(b=>b.classList.toggle("selected",b===btn));
+}
+
+function buildExercises(day){
+  const container = document.getElementById('ex-'+day+'-exercises');
+  if(!container || container.children.length > 0) return;
+  (menus[day]||[]).forEach(ex => {
+    exData[ex.id] = {weight:null, feel:null, variant: ex.variants?ex.variants[0]:null};
+    const div = document.createElement('div');
+    div.className = 'ex-block';
+    const variantHtml = ex.variants ? `<div style="display:flex;gap:6px;margin-bottom:10px">${ex.variants.map((v,i)=>`<button class="feel-btn${i===0?' selected':''}" style="flex:1;text-align:center" onclick="setVariant('${ex.id}','${v}',this)">${v}</button>`).join('')}</div>` : '';
+    div.innerHTML = `
+      <div class="ex-header">
+        <span class="ex-name" id="exname-${ex.id}">${ex.variants ? ex.name+' '+ex.variants[0] : ex.name}</span>
+        ${ex.note?`<span class="ex-note">${ex.note}</span>`:''}
+      </div>
+      <div class="ex-body">
+        ${variantHtml}
+        <div class="ex-weight-row">
+          <label>重量</label>
+          <input class="ex-weight-input" type="number" step="0.5" placeholder="—" id="weight-${ex.id}" oninput="exData['${ex.id}'].weight=parseFloat(this.value)||null">
+          <span class="ex-weight-unit">kg</span>
+        </div>
+        <div class="feel-row" id="feel-${ex.id}">
+          ${feels.map((f,i)=>`<button class="feel-btn" onclick="setFeel('${ex.id}',${i},this)">${f}</button>`).join('')}
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function setFeel(exId, idx, btn){
+  exData[exId].feel = idx;
+  document.getElementById('feel-'+exId).querySelectorAll('.feel-btn').forEach((b,i)=>b.classList.toggle('selected',i===idx));
+}
+
+function selectDay(day, btn){
+  currentDay = day;
+  document.querySelectorAll('.day-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['shoulder','back','leg','cardio'].forEach(d=>{
+    document.getElementById('ex-'+d).style.display = d===day?'block':'none';
+  });
+  if(day!=='cardio') buildExercises(day);
+}
+
+buildExercises('shoulder');
+
+function saveTraining(){
+  const date = document.getElementById('t-date').value;
+  if(!date){alert('請選擇日期');return;}
+  let d = {date, type:currentDay, exercises:{}};
+  if(currentDay==='cardio'){
+    d.cardioType = document.getElementById('cardio-type').value;
+    d.duration = parseFloat(document.getElementById('cardio-duration').value)||null;
+    d.incline = parseFloat(document.getElementById('cardio-incline').value)||null;
+    d.speed = parseFloat(document.getElementById('cardio-speed').value)||null;
+  } else {
+    (menus[currentDay]||[]).forEach(ex=>{
+      const w = parseFloat(document.getElementById('weight-'+ex.id)?.value)||null;
+      const f = exData[ex.id]?.feel??null;
+      const v = exData[ex.id]?.variant??null;
+      const displayName = v || ex.name;
+      if(w!==null||f!==null) d.exercises[ex.id]={name:displayName,weight:w,feel:f};
+    });
+  }
+  const logs = db.get('trainLogs')||[];
+  logs.unshift(d);
+  db.set('trainLogs',logs);
+  renderTrainingLog();
+  if(currentDay!=='cardio'){
+    (menus[currentDay]||[]).forEach(ex=>{
+      const el = document.getElementById('weight-'+ex.id);
+      if(el) el.value='';
+      exData[ex.id]={weight:null,feel:null};
+      const row = document.getElementById('feel-'+ex.id);
+      if(row) row.querySelectorAll('.feel-btn').forEach(b=>b.classList.remove('selected'));
+    });
+  }
+  alert('已儲存！');
+}
+
+function renderTrainingLog(){
+  const logs = db.get('trainLogs')||[];
+  const el = document.getElementById('training-log');
+  if(!logs.length){el.innerHTML='<span class="empty">尚無紀錄</span>';return;}
+  const dayNames={shoulder:'肩',back:'背',leg:'腿',cardio:'有氧'};
+  const cardioNames={treadmill:'跑步機爬坡',walk:'快走',bike:'騎車',other:'其他'};
+  el.innerHTML=logs.slice(0,20).map(d=>{
+    let content='';
+    if(d.type==='cardio'){
+      const chips=[];
+      if(d.cardioType) chips.push(cardioNames[d.cardioType]||d.cardioType);
+      if(d.duration) chips.push(d.duration+'分鐘');
+      if(d.incline) chips.push('坡度'+d.incline);
+      if(d.speed) chips.push('速度'+d.speed);
+      content=`<div class="log-chips">${chips.map(c=>`<span class="chip">${c}</span>`).join('')}</div>`;
+    } else {
+      const exs=Object.values(d.exercises||{});
+      content=`<div class="log-chips">${exs.map(e=>{
+        let t=e.name;
+        if(e.weight) t+=' '+e.weight+'kg';
+        if(e.feel!==null&&e.feel!==undefined) t+=' · '+feels[e.feel];
+        return `<span class="chip">${t}</span>`;
+      }).join('')}</div>`;
+    }
+    return `<div class="log-item"><div class="log-date">${d.date} <strong>${dayNames[d.type]||d.type}</strong></div>${content}</div>`;
+  }).join('');
+}
+
+function saveBody(){
+  const d={
+    date:document.getElementById('b-date').value,
+    weight:parseFloat(document.getElementById('b-weight').value)||null,
+    waist:parseFloat(document.getElementById('b-waist').value)||null,
+    hip:parseFloat(document.getElementById('b-hip').value)||null,
+    thigh:parseFloat(document.getElementById('b-thigh').value)||null,
+    arm:parseFloat(document.getElementById('b-arm').value)||null,
+    sleep:parseInt(document.getElementById('b-sleep').value),
+    fatigue:parseInt(document.getElementById('b-fatigue').value),
+  };
+  if(!d.date){alert('請選擇日期');return;}
+  const logs=db.get('bodyLogs')||[];
+  logs.unshift(d);
+  db.set('bodyLogs',logs);
+  renderBodyLog();
+  ['b-weight','b-waist','b-hip','b-thigh','b-arm'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('b-sleep').value=3;
+  document.getElementById('b-fatigue').value=2;
+  document.getElementById('sleep-val').textContent=3;
+  document.getElementById('fatigue-val').textContent=2;
+  alert('已儲存！');
+}
+
+const sleepLabels=['','很差','不好','普通','不錯','很好'];
+const fatigueLabels=['','很輕鬆','普通','有點累','很累','極度疲勞'];
+
+function renderBodyLog(){
+  const logs=db.get('bodyLogs')||[];
+  const el=document.getElementById('body-log');
+  if(!logs.length){el.innerHTML='<span class="empty">尚無紀錄</span>';return;}
+  el.innerHTML=logs.slice(0,12).map(d=>{
+    const whr=(d.waist&&d.hip)?(d.waist/d.hip).toFixed(2):null;
+    const chips=[];
+    if(d.weight) chips.push('體重 '+d.weight+'kg');
+    if(d.waist) chips.push('腰 '+d.waist+'cm');
+    if(d.hip) chips.push('臀 '+d.hip+'cm');
+    if(d.thigh) chips.push('大腿 '+d.thigh+'cm');
+    if(d.arm) chips.push('上臂 '+d.arm+'cm');
+    if(whr) chips.push('腰臀比 '+whr);
+    if(d.sleep) chips.push('睡眠 '+sleepLabels[d.sleep]);
+    if(d.fatigue) chips.push('疲勞 '+fatigueLabels[d.fatigue]);
+    return `<div class="log-item"><div class="log-date">${d.date}</div><div class="log-chips">${chips.map(c=>`<span class="chip">${c}</span>`).join('')}</div></div>`;
+  }).join('');
+}
+
+function savePeriod(){
+  const last=document.getElementById('p-last').value;
+  const cycle=parseInt(document.getElementById('p-cycle').value)||28;
+  if(!last){alert('請選擇日期');return;}
+  db.set('period',{last,cycle});
+  renderCycle();
+  renderOverview();
+}
+
+function saveTrainStart(){
+  const start=document.getElementById('ts-start').value;
+  if(!start){alert('請選擇日期');return;}
+  db.set('trainStart',start);
+  renderOverview();
+  alert('已設定！');
+}
+
+function renderCycle(){
+  const p=db.get('period');
+  const card=document.getElementById('cycle-card');
+  if(p){
+    document.getElementById('p-last').value=p.last;
+    document.getElementById('p-cycle').value=p.cycle;
+  }
+  if(!p){card.style.display='none';return;}
+  card.style.display='block';
+  const lastDate=new Date(p.last);
+  const now=new Date();
+  const daysSince=Math.floor((now-lastDate)/86400000);
+  const dayOfCycle=(daysSince%p.cycle)+1;
+  let nextStart=new Date(lastDate);
+  while(nextStart<=now) nextStart=new Date(nextStart.getTime()+p.cycle*86400000);
+  const daysToNext=Math.floor((nextStart-now)/86400000);
+  const nextStr=nextStart.toISOString().slice(0,10);
+  let phase='',phaseClass='',advice='';
+  if(dayOfCycle<=5){phase='生理期';phaseClass='alert-pink';advice='注意恢復，重量可以稍微降低，有氧輕鬆走即可。';}
+  else if(dayOfCycle<=13){phase='濾泡期';phaseClass='alert-accent';advice='體力回升，適合推進重量和高強度訓練。';}
+  else if(dayOfCycle<=16){phase='排卵期';phaseClass='alert-amber';advice='力量高峰期，測試新重量的好時機。';}
+  else{phase='黃體期';phaseClass='alert-green';advice='容易疲勞和水腫，維持現有重量即可。';}
+  const pct=Math.min(100,(dayOfCycle/p.cycle)*100).toFixed(1);
+  document.getElementById('cycle-detail').innerHTML=`
+    <div class="${phaseClass} alert"><strong>第 ${dayOfCycle} 天・${phase}</strong><br>${advice}</div>
+    <div style="font-family:sans-serif;font-size:12px;color:var(--muted);margin-bottom:6px">週期進度 ${dayOfCycle}/${p.cycle} 天</div>
+    <div style="background:var(--border);border-radius:20px;height:8px;overflow:hidden;margin-bottom:14px">
+      <div style="height:100%;width:${pct}%;background:var(--text);border-radius:20px"></div>
+    </div>
+    <div style="font-family:sans-serif;font-size:13px">下次預估：<strong>${nextStr}</strong>（${daysToNext} 天後）</div>`;
+}
+
+// ── Reminders ──
+function computeReminders(){
+  const reminders = [];
+  const now = new Date();
+
+  // 1. 圍度提醒：上次有記腰圍的紀錄後 18 天
+  const bodyLogs = db.get('bodyLogs')||[];
+  const lastMeasure = bodyLogs.find(l=>l.waist);
+  if(lastMeasure){
+    const last = new Date(lastMeasure.date);
+    const p = db.get('period');
+    let target = new Date(last.getTime() + 18*86400000);
+    // 避開生理期前後2天
+    if(p){
+      const lastP = new Date(p.last);
+      const daysSince = Math.floor((target-lastP)/86400000);
+      const dayOfCycle = (daysSince%p.cycle)+1;
+      if(dayOfCycle>=26||dayOfCycle<=7){
+        target = new Date(target.getTime()+4*86400000);
+      }
+    }
+    const daysTo = Math.floor((target-now)/86400000);
+    if(daysTo<=0){
+      reminders.push({dot:'urgent', text:'該量圍度了', sub:'上次量測超過 18 天，建議今天早上空腹量'});
+    } else if(daysTo<=3){
+      reminders.push({dot:'soon', text:`${daysTo} 天後量圍度`, sub:'早上起床、上廁所後、空腹量最準'});
+    } else {
+      reminders.push({dot:'ok', text:`${daysTo} 天後量圍度`, sub:'繼續保持'});
+    }
+  } else {
+    reminders.push({dot:'urgent', text:'還沒有圍度紀錄', sub:'去身體頁面記錄第一筆'});
+  }
+
+  // 2. Deload 提醒
+  const trainStart = db.get('trainStart');
+  if(trainStart){
+    const weeks = Math.floor((now-new Date(trainStart))/604800000);
+    if(weeks>=8){
+      reminders.push({dot:'urgent', text:'Deload 週到了', sub:`已連續訓練 ${weeks} 週，本週重量降 40%`});
+    } else if(weeks>=6){
+      reminders.push({dot:'soon', text:`再 ${8-weeks} 週安排 Deload`, sub:'提前規劃休息週'});
+    }
+  }
+
+  // 3. 經期提醒
+  const pData = db.get('period');
+  if(pData){
+    const lastDate = new Date(pData.last);
+    const daysSinceLastP = Math.floor((now-lastDate)/86400000);
+    const dayOfCycleP = (daysSinceLastP % pData.cycle) + 1;
+    let nextStart = new Date(lastDate);
+    while(nextStart<=now) nextStart = new Date(nextStart.getTime()+pData.cycle*86400000);
+    const daysToNext = Math.floor((nextStart-now)/86400000);
+
+    if(dayOfCycleP<=3){
+      // 生理期第 1–3 天：完全休息
+      reminders.push({dot:'urgent', text:`生理期第 ${dayOfCycleP} 天`, sub:'好好休息，不用動 🫶'});
+    } else if(dayOfCycleP<=5){
+      // 生理期第 4–5 天：可以開始輕動
+      reminders.push({dot:'soon', text:`生理期第 ${dayOfCycleP} 天`, sub:'快結束了，可以開始輕鬆散步或有氧'});
+    } else if(daysToNext<=4&&daysToNext>=1){
+      // 經期前 4 天：提醒準備休息
+      reminders.push({dot:'soon', text:`經期 ${daysToNext} 天後開始`, sub:'這幾天可以改做輕有氧或休息，不用硬去重訓'});
+    } else if(daysToNext===0){
+      reminders.push({dot:'urgent', text:'經期今天開始', sub:'好好休息，照顧自己 🫶'});
+    }
+  }
+
+  return reminders;
+}
+
+function renderReminders(){
+  const reminders = computeReminders();
+  const el = document.getElementById('ov-reminders');
+  if(!reminders.length){el.innerHTML='';return;}
+  el.innerHTML = `<div style="margin-bottom:14px">${reminders.map(r=>`
+    <div class="reminder">
+      <div class="reminder-dot ${r.dot}"></div>
+      <div class="reminder-text">${r.text}<div class="reminder-sub">${r.sub}</div></div>
+    </div>`).join('')}</div>`;
+}
+
+function renderOverview(){
+  const logs=db.get('bodyLogs')||[];
+  const latest=logs[0];
+  document.getElementById('ov-weight').textContent=latest?.weight??'—';
+  document.getElementById('ov-waist').textContent=latest?.waist??'—';
+  document.getElementById('ov-thigh').textContent=latest?.thigh??'—';
+  document.getElementById('ov-whr').textContent=(latest?.waist&&latest?.hip)?(latest.waist/latest.hip).toFixed(2):'—';
+
+  const trainStart=db.get('trainStart');
+  const weeksEl=document.getElementById('ov-weeks');
+  const deloadEl=document.getElementById('ov-deload');
+  if(trainStart){
+    const weeks=Math.floor((new Date()-new Date(trainStart))/604800000);
+    weeksEl.textContent=weeks;
+    const trainLogs=db.get('trainLogs')||[];
+    const recentHard=trainLogs.slice(0,9).filter(l=>l.feel==='hard').length;
+    if(weeks>=10){deloadEl.innerHTML='<div class="alert alert-amber"><strong>建議安排 Deload 週</strong><br>已連續訓練 '+weeks+' 週。本週重量降 40%，有氧減為 2 次。</div>';}
+    else if(weeks>=7&&recentHard>=3){deloadEl.innerHTML='<div class="alert alert-amber">近期多次訓練感覺很累，可以考慮提早 Deload。</div>';}
+    else if(weeks>=5){deloadEl.innerHTML='<div class="alert alert-accent">第 '+weeks+' 週，預計再 '+(8-weeks)+' 週後 Deload。繼續推進。</div>';}
+    else{deloadEl.innerHTML='<div class="alert alert-green">第 '+weeks+' 週，狀態良好。專注動作品質。</div>';}
+  } else {
+    weeksEl.textContent='—';
+    deloadEl.innerHTML='<div style="font-size:13px;font-family:sans-serif;color:var(--muted)">請在週期頁面設定訓練開始日</div>';
+  }
+
+  const p=db.get('period');
+  const periodEl=document.getElementById('ov-period');
+  if(p){
+    const lastDate=new Date(p.last);
+    const now=new Date();
+    const daysSince=Math.floor((now-lastDate)/86400000);
+    const dayOfCycle=(daysSince%p.cycle)+1;
+    let nextStart=new Date(lastDate);
+    while(nextStart<=now) nextStart=new Date(nextStart.getTime()+p.cycle*86400000);
+    const daysToNext=Math.floor((nextStart-now)/86400000);
+    const nextStr=nextStart.toISOString().slice(0,10);
+    let phase='';
+    if(dayOfCycle<=5) phase='生理期';
+    else if(dayOfCycle<=13) phase='濾泡期';
+    else if(dayOfCycle<=16) phase='排卵期';
+    else phase='黃體期';
+    periodEl.innerHTML=`<div style="font-family:sans-serif;font-size:13px"><div style="margin-bottom:6px">目前：第 <strong>${dayOfCycle}</strong> 天・${phase}</div><div style="color:var(--muted)">下次預估 <strong>${nextStr}</strong>（${daysToNext} 天後）</div></div>`;
+  } else {
+    periodEl.innerHTML='<span class="empty" style="padding:8px 0">請在週期頁面設定</span>';
+  }
+
+  const trainLogs=db.get('trainLogs')||[];
+  const progressEl=document.getElementById('ov-progress');
+  const trackFields=[
+    {key:'press',name:'肩推'},{key:'squat',name:'深蹲'},{key:'dbrow',name:'划船'},
+    {key:'rdl',name:'RDL'},{key:'pulldown',name:'下拉'},{key:'split',name:'分腿蹲'}
+  ];
+  let html='';
+  trackFields.forEach(f=>{
+    const vals=trainLogs.filter(l=>l.exercises&&l.exercises[f.key]&&l.exercises[f.key].weight).map(l=>l.exercises[f.key].weight);
+    if(vals.length<2) return;
+    const latest=vals[0],prev=vals[1],diff=latest-prev;
+    const cls=diff>0?'trend-up':diff<0?'trend-down':'';
+    const sym=diff>0?'↑':diff<0?'↓':'→';
+    html+=`<div class="progress-row"><span style="min-width:52px;font-family:sans-serif">${f.name}</span><span style="font-weight:500;font-family:sans-serif;min-width:44px">${latest}kg</span><span class="${cls}" style="font-size:12px;font-family:sans-serif">${sym} ${Math.abs(diff).toFixed(1)}kg</span></div>`;
+  });
+  progressEl.innerHTML=html||'<span class="empty" style="padding:8px 0">記錄動作重量後顯示進步</span>';
+
+  renderReminders();
+}
+
+function goTo(page, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  btn.classList.add('active');
+  if(page==='overview') renderOverview();
+  if(page==='body') renderBodyLog();
+  if(page==='training') renderTrainingLog();
+  if(page==='cycle') renderCycle();
+}
+
+const ts=db.get('trainStart');
+if(ts) document.getElementById('ts-start').value=ts;
+const p=db.get('period');
+if(p){document.getElementById('p-last').value=p.last;document.getElementById('p-cycle').value=p.cycle;}
+
+renderOverview();
+renderBodyLog();
+renderTrainingLog();
+renderCycle();
+</script>
+
+<div class="otter-container">
+  <div class="otter"><span class="otter-feet">🦦</span></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function exportData(){
+  const data = {
+    exportedAt: new Date().toISOString(),
+    bodyLogs: db.get('bodyLogs')||[],
+    trainLogs: db.get('trainLogs')||[],
+    period: db.get('period'),
+    trainStart: db.get('trainStart'),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = '趙趙子體態紀錄_' + dateStr + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ 匯出成功！');
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(data.bodyLogs) db.set('bodyLogs', data.bodyLogs);
+      if(data.trainLogs) db.set('trainLogs', data.trainLogs);
+      if(data.period) db.set('period', data.period);
+      if(data.trainStart) db.set('trainStart', data.trainStart);
+      renderOverview();
+      renderBodyLog();
+      renderTrainingLog();
+      renderCycle();
+      showToast('✅ 匯入成功！');
+    } catch(err) {
+      showToast('❌ 檔案格式錯誤');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+</script>
+
+</body>
+</html>
